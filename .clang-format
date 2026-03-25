@@ -1,0 +1,28 @@
+# Based on Nebula standard
+Language: Cpp
+BasedOnStyle: Google
+
+AccessModifierOffset: -2
+AlignAfterOpenBracket: AlwaysBreak
+AllowShortFunctionsOnASingleLine: InlineOnly
+BraceWrapping:
+  AfterClass: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+BreakBeforeBraces: Custom
+ColumnLimit: 100
+ConstructorInitializerIndentWidth: 0
+ContinuationIndentWidth: 2
+DerivePointerAlignment: false
+PointerAlignment: Middle
+ReflowComments: true
+IncludeCategories:
+  - Regex: <[a-z_]*>
+    Priority: 10
+  - Regex: <.*\.h>
+    Priority: 9
+  - Regex: <.*>
+    Priority: 8
+  - Regex: '".*"'
+    Priority: 7

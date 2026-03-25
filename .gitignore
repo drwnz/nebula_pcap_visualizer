@@ -1,0 +1,9 @@
+node_modules/
+build/
+web/data/
+.vscode/
+.DS_Store
+*.swp
+*.o
+*.d
+pcap_converter
