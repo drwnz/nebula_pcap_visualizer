@@ -57,6 +57,27 @@
         pointer-events: none;
         z-index: 10;
       }
+      .view-controls {
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        background: rgba(0, 0, 0, 0.55);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 6px;
+        padding: 8px 10px;
+        z-index: 10;
+      }
+      .view-controls .label-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+      .sensor-slider {
+        width: 100%;
+        cursor: pointer;
+      }
       #controls {
         position: fixed;
         bottom: 20px;
@@ -71,6 +92,23 @@
       }
       #slider {
         width: 100%;
+        cursor: pointer;
+      }
+      .controls-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-top: 10px;
+      }
+      .control-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 220px;
+      }
+      .control-group input[type="range"] {
+        flex: 1;
         cursor: pointer;
       }
       #info {
@@ -118,10 +156,7 @@
           margin-bottom: 10px;
         "
       >
-        <div class="label">
-          FRAME: <span id="frame-num">0</span> /
-          <span id="total-frames">0</span>
-        </div>
+        <div class="label">Independent frame control per sensor</div>
         <div
           class="label"
           id="camera-view"
@@ -138,7 +173,21 @@
           VIEW: pos(0,0,0) target(0,0,0)
         </div>
       </div>
-      <input type="range" id="slider" min="0" max="0" value="0" />
+      <div class="controls-row">
+        <div class="control-group">
+          <div class="label">POINT SIZE</div>
+          <input
+            type="range"
+            id="point-size-slider"
+            min="0.01"
+            max="0.12"
+            step="0.005"
+            value="0.03"
+          />
+          <div class="label"><span id="point-size-value">0.03</span></div>
+        </div>
+        <div class="label">COLOR: intensity</div>
+      </div>
     </div>
 
     <!-- Three.js from CDN -->

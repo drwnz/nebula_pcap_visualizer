@@ -1,0 +1,39 @@
+{
+  "project_name": "All PCAPs Visualization (Fast)",
+  "export_defaults": {
+    "frame_stride": 10
+  },
+  "sensors": [
+    {
+      "name": "RobinE1X",
+      "model": "RobinE1X",
+      "pcap": "/home/drwnz/nebula_dev/pcaps/RobinE1X/e1x.pcap",
+      "calib": "/home/drwnz/nebula_dev/pcaps/RobinE1X/calibration/anglehv_table.bin",
+      "transform": { "pos": [0, 0, 0], "rot": [0, 0, 0] },
+      "camera": { "pos": [-12, 0, 2], "target": [6, 0, 0], "up": [0, 0, 1] }
+    },
+    {
+      "name": "EMX",
+      "model": "EMX",
+      "pcap": "/home/drwnz/nebula_dev/pcaps/EMX/emx.pcap",
+      "transform": { "pos": [5, 0, 0], "rot": [0, 0, 0] },
+      "camera": { "pos": [-12, 0, 2], "target": [6, 0, 0], "up": [0, 0, 1] }
+    },
+    {
+      "name": "FTX140",
+      "model": "FTX140",
+      "pcap": "/home/drwnz/nebula_dev/pcaps/FTX140/ftx40.pcap",
+      "calib": "/home/drwnz/nebula_dev/pcaps/FTX140/ftx140.dat",
+      "transform": { "pos": [-5, 0, 0], "rot": [0, 0, 0] },
+      "camera": { "pos": [-12, 0, 2], "target": [6, 0, 0], "up": [0, 0, 1] }
+    },
+    {
+      "name": "FTX180",
+      "model": "FTX180",
+      "pcap": "/home/drwnz/nebula_dev/pcaps/FTX180/ftx180.pcap",
+      "calib": "/home/drwnz/nebula_dev/pcaps/FTX180/ftx180.dat",
+      "transform": { "pos": [0, 5, 0], "rot": [0, 0, 0] },
+      "camera": { "pos": [-12, 0, 2], "target": [6, 0, 0], "up": [0, 0, 1] }
+    }
+  ]
+}

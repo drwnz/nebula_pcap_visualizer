@@ -1,0 +1,13 @@
+{
+  "project_name": "Seyond EX1 Visualization",
+  "sensors": [
+    {
+      "name": "seyond_ex1",
+      "model": "RobinE1X",
+      "pcap": "/home/drwnz/nebula_dev/Seyond/Calib_seyond/130_robin_e.pcap",
+      "calib": "/home/drwnz/nebula_dev/Seyond/Calib_seyond/E1X/anglehv_table.bin",
+      "transform": { "pos": [0, 0, 0], "rot": [0, 0, 0] },
+      "camera": { "pos": [20, 20, 20], "target": [0, 0, 0] }
+    }
+  ]
+}
