@@ -135,7 +135,7 @@ def default_transform(index: int) -> dict[str, list[float]]:
 def default_camera(index: int) -> dict[str, list[float]]:
     target_x = float(index) * 5.0
     return {
-        "pos": [target_x - 10.0, 0.0, 5.0],
+        "pos": [target_x - 3.0, 0.0, 1.5],
         "target": [target_x, 0.0, 0.0],
         "up": [0.0, 0.0, 1.0],
     }
