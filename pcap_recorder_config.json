@@ -1,0 +1,143 @@
+{
+  "configuration_name": "all_sensors",
+  "output_root": "recordings",
+  "tcpdump_binary": "tcpdump",
+  "tcpdump_flags": [
+    "-n",
+    "-s",
+    "0",
+    "-U"
+  ],
+  "sensors": [
+    {
+      "name": "robosense_e1",
+      "model": "E1",
+      "interface": "eth0",
+      "host_ip": "192.168.10.20",
+      "sensor_ip": "192.168.10.101",
+      "ports": [
+        6699
+      ],
+      "visualize": true
+    },
+    {
+      "name": "robosense_emx",
+      "model": "EMX",
+      "interface": "eth0",
+      "host_ip": "192.168.10.20",
+      "sensor_ip": "192.168.10.103",
+      "ports": [
+        4699,
+        4788,
+        6766
+      ],
+      "visualize": true
+    },
+    {
+      "name": "robosense_em4",
+      "model": "EM4",
+      "interface": "eth0",
+      "host_ip": "192.168.10.20",
+      "sensor_ip": "192.168.10.104",
+      "ports": [
+        5699,
+        5788,
+        5766
+      ],
+      "visualize": true
+    },
+    {
+      "name": "seyond_robin_w",
+      "model": "RobinW",
+      "interface": "eth0",
+      "host_ip": "192.168.10.20",
+      "sensor_ip": "192.168.10.102",
+      "ports": [
+        2373
+      ],
+      "visualize": true
+    },
+    {
+      "name": "seyond_robin_e",
+      "model": "RobinE1X",
+      "interface": "eth1",
+      "host_ip": "192.168.1.20",
+      "sensor_ip": "192.168.1.130",
+      "ports": [
+        2372
+      ],
+      "visualize": true
+    },
+    {
+      "name": "hesai_ftx180",
+      "model": "FTX180",
+      "interface": "eth1",
+      "host_ip": "192.168.1.20",
+      "sensor_ip": "192.168.1.180",
+      "ports": [
+        2368
+      ],
+      "visualize": true
+    },
+    {
+      "name": "hesai_ftx140",
+      "model": "FTX140",
+      "interface": "eth1",
+      "host_ip": "192.168.1.20",
+      "sensor_ip": "192.168.1.140",
+      "ports": [
+        2369
+      ],
+      "visualize": true
+    },
+    {
+      "name": "hesai_at128",
+      "model": "PandarAT128",
+      "interface": "eth1",
+      "host_ip": "192.168.1.20",
+      "sensor_ip": "192.168.1.128",
+      "ports": [
+        2370
+      ],
+      "visualize": true
+    },
+    {
+      "name": "seyond_hummingbird_d1",
+      "model": "HummingbirdD1",
+      "interface": "eth1",
+      "host_ip": "192.168.1.20",
+      "sensor_ip": "192.168.1.110",
+      "ports": [
+        2371
+      ],
+      "visualize": true
+    },
+    {
+      "name": "cepton_nova_x",
+      "interface": "eth2",
+      "host_ip": "",
+      "sensor_ip": "192.168.32.32",
+      "ports": [],
+      "visualize": false
+    },
+    {
+      "name": "cepton_vista_x",
+      "interface": "eth3",
+      "host_ip": "",
+      "sensor_ip": "192.168.42.132",
+      "ports": [],
+      "visualize": false
+    },
+    {
+      "name": "seyond_falcon",
+      "model": "FalconK",
+      "interface": "eth4",
+      "host_ip": "172.168.1.15",
+      "sensor_ip": "172.168.1.10",
+      "ports": [
+        8010
+      ],
+      "visualize": true
+    }
+  ]
+}
