@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record one PCAP per sensor based on a JSON config."""
+"""Record one PCAP per sensor for a named experiment based on a JSON config."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ from typing import Any
 @dataclass
 class SensorCapture:
     name: str
+    model: str | None
     interface: str
     sensor_ip: str | None
     host_ip: str | None
@@ -29,6 +30,7 @@ class SensorCapture:
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> "SensorCapture":
         name = require_str(raw, "name")
+        model = optional_str(raw, "model", allow_empty=True)
         interface = require_str(raw, "interface")
         sensor_ip = optional_str(raw, "sensor_ip", allow_empty=True)
         host_ip = optional_str(raw, "host_ip", allow_empty=True)
@@ -54,6 +56,7 @@ class SensorCapture:
 
         return cls(
             name=name,
+            model=model,
             interface=interface,
             sensor_ip=sensor_ip,
             host_ip=host_ip,
@@ -111,6 +114,25 @@ def sanitize_path_component(value: str) -> str:
     return "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in value)
 
 
+def compact_model_name(value: str) -> str:
+    return "".join(ch.lower() for ch in value if ch.isalnum())
+
+
+def needs_calibration_dir(sensor: SensorCapture) -> bool:
+    candidates = [sensor.model, sensor.name]
+    for candidate in candidates:
+        if not candidate:
+            continue
+
+        model = compact_model_name(candidate)
+        if model.startswith("ftx"):
+            return True
+        if model in {"robinw", "robine1x", "hummingbirdd1"}:
+            return True
+
+    return False
+
+
 def load_config(config_path: Path) -> tuple[str, Path, str, list[str], list[SensorCapture]]:
     with config_path.open("r", encoding="utf-8") as handle:
         raw = json.load(handle)
@@ -119,7 +141,7 @@ def load_config(config_path: Path) -> tuple[str, Path, str, list[str], list[Sens
         raise ValueError("Config root must be a JSON object")
 
     configuration_name = require_str(raw, "configuration_name")
-    output_root = raw.get("output_root", "recordings")
+    output_root = raw.get("output_root", "../experiments")
     if not isinstance(output_root, str) or not output_root.strip():
         raise ValueError("Missing or invalid 'output_root' field")
 
@@ -168,8 +190,20 @@ def write_manifest(experiment_dir: Path, sensors: list[SensorCapture]) -> None:
         handle.write("\n")
 
 
+def create_calibration_dirs(experiment_dir: Path, sensors: list[SensorCapture]) -> None:
+    sensors_requiring_calibration = [sensor for sensor in sensors if needs_calibration_dir(sensor)]
+    if not sensors_requiring_calibration:
+        return
+
+    calibration_root = experiment_dir / "calibration"
+    calibration_root.mkdir(parents=True, exist_ok=True)
+
+    for sensor in sensors_requiring_calibration:
+        (calibration_root / sanitize_path_component(sensor.name)).mkdir(parents=True, exist_ok=True)
+
+
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Record one PCAP per configured sensor")
+    parser = argparse.ArgumentParser(description="Record one PCAP per configured sensor into an experiment directory")
     parser.add_argument("config", type=Path, help="Path to recorder JSON config")
     parser.add_argument(
         "experiment_name",
@@ -205,6 +239,7 @@ def main() -> int:
         return 1
 
     experiment_dir.mkdir(parents=True, exist_ok=True)
+    create_calibration_dirs(experiment_dir, sensors)
     write_manifest(experiment_dir, sensors)
     with (experiment_dir / "capture_config.json").open("w", encoding="utf-8") as handle:
         json.dump(

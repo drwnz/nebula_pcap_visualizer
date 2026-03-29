@@ -4,6 +4,7 @@
 #include <nebula_hesai_common/hesai_common.hpp>
 #include <nebula_hesai_decoders/hesai_driver.hpp>
 #include <nebula_robosense_common/robosense_common.hpp>
+#include <nebula_robosense_decoders/offline/em4_pcap_calibration.hpp>
 #include <nebula_robosense_decoders/robosense_driver.hpp>
 #include <nebula_seyond_common/seyond_common.hpp>
 #include <nebula_seyond_decoders/seyond_decoder.hpp>
@@ -82,6 +83,8 @@ struct FragmentAssembly
 {
   bool saw_first_fragment{false};
   bool saw_last_fragment{false};
+  std::string src_ip{};
+  std::string dst_ip{};
   uint16_t source_port{0};
   uint16_t dest_port{0};
   size_t expected_udp_payload_size{0};
@@ -107,9 +110,120 @@ struct FragmentAssembly
   }
 };
 
+struct SensorTrafficFilter
+{
+  std::string sensor_ip{};
+  std::string host_ip{};
+  std::string protocol{"udp"};
+  std::set<uint16_t> ports{};
+};
+
+SensorTrafficFilter traffic_filter_from_json(const json & sensor_cfg)
+{
+  SensorTrafficFilter filter;
+  filter.sensor_ip = sensor_cfg.value("sensor_ip", "");
+  filter.host_ip = sensor_cfg.value("host_ip", "");
+  filter.protocol = sensor_cfg.value("protocol", "udp");
+
+  if (sensor_cfg.contains("ports") && sensor_cfg["ports"].is_array()) {
+    for (const auto & port : sensor_cfg["ports"]) {
+      if (port.is_number_unsigned()) {
+        filter.ports.insert(port.get<uint16_t>());
+      }
+    }
+  }
+
+  return filter;
+}
+
+SensorTrafficFilter relaxed_traffic_filter(const SensorTrafficFilter & filter)
+{
+  SensorTrafficFilter relaxed = filter;
+  relaxed.sensor_ip.clear();
+  relaxed.host_ip.clear();
+  relaxed.ports.clear();
+  return relaxed;
+}
+
+bool matches_traffic_filter(
+  const SensorTrafficFilter & filter, const std::string & src_ip, const std::string & dst_ip,
+  uint16_t src_port, uint16_t dst_port)
+{
+  if (!filter.protocol.empty() && filter.protocol != "udp") {
+    return false;
+  }
+
+  if (!filter.sensor_ip.empty() && !filter.host_ip.empty()) {
+    const bool direct = src_ip == filter.sensor_ip && dst_ip == filter.host_ip;
+    const bool reverse = src_ip == filter.host_ip && dst_ip == filter.sensor_ip;
+    if (!direct && !reverse) {
+      return false;
+    }
+  } else if (!filter.sensor_ip.empty()) {
+    if (src_ip != filter.sensor_ip && dst_ip != filter.sensor_ip) {
+      return false;
+    }
+  } else if (!filter.host_ip.empty()) {
+    if (src_ip != filter.host_ip && dst_ip != filter.host_ip) {
+      return false;
+    }
+  }
+
+  if (!filter.ports.empty()) {
+    if (filter.ports.count(src_port) == 0 && filter.ports.count(dst_port) == 0) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool matches_traffic_filter(const SensorTrafficFilter & filter, const UdpPacket & udp_packet)
+{
+  return matches_traffic_filter(
+    filter, udp_packet.src_ip, udp_packet.dst_ip, udp_packet.src_port, udp_packet.dst_port);
+}
+
+std::optional<uint16_t> optional_uint16_from_json(const json & obj, const char * key)
+{
+  if (!obj.contains(key) || !obj[key].is_number_unsigned()) {
+    return std::nullopt;
+  }
+  return obj[key].get<uint16_t>();
+}
+
+std::optional<UdpPacket> find_first_matching_udp_packet(
+  const std::string & pcap_file, const std::function<bool(const UdpPacket &)> & predicate);
+
+bool is_candidate_packet_for_model(const std::string & model, const UdpPacket & udp_packet)
+{
+  if (model == "RobinW" || model == "RobinE1X" || model == "HummingbirdD1" || model == "FalconK") {
+    return true;
+  }
+  if (model == "FTX140" || model == "FTX180") {
+    return udp_packet.payload.size() == 554;
+  }
+  if (model == "PandarAT128") {
+    return udp_packet.payload.size() >= 1000;
+  }
+  if (model == "EMX") {
+    return udp_packet.payload.size() == 812;
+  }
+  if (model == "E1" || model == "EM4") {
+    return udp_packet.payload.size() >= 1000;
+  }
+  return false;
+}
+
+bool has_matching_udp_packet(
+  const std::string & pcap_file, const std::function<bool(const UdpPacket &)> & predicate)
+{
+  return find_first_matching_udp_packet(pcap_file, predicate).has_value();
+}
+
 bool process_seyond_ipv4_packet(
   const uint8_t * data, size_t size, std::map<ReassemblyKey, FragmentAssembly> & assemblies,
-  nebula::drivers::SeyondDecoder & decoder)
+  nebula::drivers::SeyondDecoder & decoder, const SensorTrafficFilter & traffic_filter)
 {
   constexpr size_t kEthernetHeaderSize = sizeof(ether_header);
   if (size <= kEthernetHeaderSize) {
@@ -146,6 +260,12 @@ bool process_seyond_ipv4_packet(
 
     const auto * udp_header = reinterpret_cast<const udphdr *>(ip_payload);
     assembly.saw_first_fragment = true;
+    char src_ip[INET_ADDRSTRLEN]{};
+    char dst_ip[INET_ADDRSTRLEN]{};
+    inet_ntop(AF_INET, &ip_header->ip_src, src_ip, sizeof(src_ip));
+    inet_ntop(AF_INET, &ip_header->ip_dst, dst_ip, sizeof(dst_ip));
+    assembly.src_ip = src_ip;
+    assembly.dst_ip = dst_ip;
     assembly.source_port = ntohs(udp_header->uh_sport);
     assembly.dest_port = ntohs(udp_header->uh_dport);
     assembly.expected_udp_payload_size = ntohs(udp_header->uh_ulen) - sizeof(udphdr);
@@ -183,7 +303,9 @@ bool process_seyond_ipv4_packet(
     return false;
   }
 
-  if (assembly.dest_port == 2372) {
+  if (
+    matches_traffic_filter(
+      traffic_filter, assembly.src_ip, assembly.dst_ip, assembly.source_port, assembly.dest_port)) {
     decoder.unpack(assembly.udp_payload);
   }
 
@@ -290,19 +412,29 @@ bool is_robosense_model(const std::string & model)
   return model == "EMX" || model == "E1" || model == "EM4";
 }
 
-bool should_process_hesai_packet(const std::string & model, const UdpPacket & udp_packet)
+bool should_process_hesai_packet(
+  const std::string & model, const UdpPacket & udp_packet,
+  const SensorTrafficFilter & traffic_filter)
 {
+  if (!matches_traffic_filter(traffic_filter, udp_packet)) {
+    return false;
+  }
   if (model == "FTX140" || model == "FTX180") {
     return udp_packet.payload.size() == 554;
   }
   if (model == "PandarAT128") {
-    return udp_packet.dst_port == 2368 && udp_packet.payload.size() >= 1000;
+    return udp_packet.payload.size() >= 1000;
   }
   return false;
 }
 
-bool should_process_robosense_packet(const std::string & model, const UdpPacket & udp_packet)
+bool should_process_robosense_packet(
+  const std::string & model, const UdpPacket & udp_packet,
+  const SensorTrafficFilter & traffic_filter)
 {
+  if (!matches_traffic_filter(traffic_filter, udp_packet)) {
+    return false;
+  }
   if (model == "EMX") {
     return udp_packet.payload.size() == 812;
   }
@@ -381,8 +513,17 @@ struct SensorResult
   std::shared_ptr<CloudExporter> exporter{};
 };
 
+fs::path resolve_project_path(const fs::path & project_dir, const std::string & raw_path)
+{
+  const fs::path path(raw_path);
+  if (path.is_absolute()) {
+    return path;
+  }
+  return project_dir / path;
+}
+
 SensorResult process_sensor(
-  const json & sensor_cfg, const json & export_defaults,
+  const json & sensor_cfg, const json & export_defaults, const fs::path & project_dir,
   const std::shared_ptr<ConsoleLogger> & logger)
 {
   SensorResult result;
@@ -390,166 +531,215 @@ SensorResult process_sensor(
 
   const std::string name = sensor_cfg["name"];
   const std::string model_str = normalize_model_name(sensor_cfg["model"]);
-  const std::string pcap_file = sensor_cfg["pcap"];
-  const std::string calib_file = sensor_cfg.value("calib", "");
-  const size_t frame_stride =
-    sensor_cfg.value("frame_stride", export_defaults.value("frame_stride", static_cast<size_t>(1)));
+  try {
+    const SensorTrafficFilter configured_traffic_filter = traffic_filter_from_json(sensor_cfg);
+    const fs::path pcap_file = resolve_project_path(project_dir, sensor_cfg["pcap"]);
+    const std::string calib_file =
+      sensor_cfg.contains("calib")
+        ? resolve_project_path(project_dir, sensor_cfg["calib"]).lexically_normal().string()
+        : "";
+    const size_t frame_stride = sensor_cfg.value(
+      "frame_stride", export_defaults.value("frame_stride", static_cast<size_t>(1)));
 
-  {
-    std::lock_guard<std::mutex> lock(g_log_mutex);
-    std::cout << "Processing sensor: " << name << " (" << model_str << ")" << std::endl;
-  }
-
-  auto exporter = std::make_shared<CloudExporter>(name, "web/data", frame_stride);
-  auto callback =
-    std::bind(&CloudExporter::callback, exporter, std::placeholders::_1, std::placeholders::_2);
-
-  char errbuf[PCAP_ERRBUF_SIZE];
-  pcap_t * handle = pcap_open_offline(pcap_file.c_str(), errbuf);
-  if (handle == nullptr) {
-    std::lock_guard<std::mutex> lock(g_log_mutex);
-    std::cerr << "Could not open pcap file: " << pcap_file << " | error: " << errbuf << std::endl;
-    return result;
-  }
-
-  std::unique_ptr<nebula::drivers::SeyondDecoder> seyond_decoder;
-  std::unique_ptr<nebula::drivers::HesaiDriver> hesai_driver;
-  std::unique_ptr<nebula::drivers::RobosenseDriver> robosense_driver;
-  if (is_seyond_model(model_str)) {
-    auto config = std::make_shared<nebula::drivers::SeyondSensorConfiguration>();
-    config->sensor_model = nebula::drivers::seyond_sensor_model_from_string(model_str);
-    nebula::drivers::SeyondCalibrationData calib;
-    if (!calib_file.empty()) {
-      auto res = nebula::drivers::SeyondCalibrationData::load_from_file(calib_file);
-      if (res.has_value()) calib = res.value();
-    }
-    seyond_decoder = std::make_unique<nebula::drivers::SeyondDecoder>(*config, callback, calib);
-  } else if (is_hesai_model(model_str)) {
-    auto config = std::make_shared<nebula::drivers::HesaiSensorConfiguration>();
-    config->sensor_model = nebula::drivers::sensor_model_from_string(model_str);
-    config->frame_id = "hesai";
-    config->min_range = 0.05;
-    config->max_range = model_str == "PandarAT128" ? 200.0 : 25.0;
-    config->rotation_speed = 600;
-    config->return_mode =
-      model_str == "PandarAT128"
-        ? nebula::drivers::ReturnMode::DUAL_ONLY
-        : nebula::drivers::return_mode_from_string_hesai("First", config->sensor_model);
-    config->dual_return_distance_threshold = 0.1;
-    config->calibration_download_enabled = !calib_file.empty();
-
-    if (model_str == "FTX140") {
-      config->cloud_min_angle = 20;
-      config->cloud_max_angle = 160;
-      config->sync_angle = 20;
-      config->cut_angle = 160.0;
-    } else if (model_str == "FTX180") {
-      config->cloud_min_angle = 0;
-      config->cloud_max_angle = 180;
-      config->sync_angle = 90;
-      config->cut_angle = 180.0;
-    } else {
-      config->cloud_min_angle = 0;
-      config->cloud_max_angle = 360;
-      config->sync_angle = 0;
-      config->cut_angle = 0.0;
+    {
+      std::lock_guard<std::mutex> lock(g_log_mutex);
+      std::cout << "Processing sensor: " << name << " (" << model_str << ")" << std::endl;
     }
 
-    auto first_data_packet =
-      find_first_matching_udp_packet(pcap_file, [model_str](const UdpPacket & udp_packet) {
-        if (model_str == "PandarAT128") {
-          return udp_packet.dst_port == 2368 && udp_packet.payload.size() >= 1000;
-        }
-        return udp_packet.dst_port == 2368 && udp_packet.payload.size() == 554;
+    SensorTrafficFilter active_traffic_filter = configured_traffic_filter;
+    const bool has_strict_matches = has_matching_udp_packet(
+      pcap_file.string(), [model_str, configured_traffic_filter](const UdpPacket & udp_packet) {
+        return is_candidate_packet_for_model(model_str, udp_packet) &&
+               matches_traffic_filter(configured_traffic_filter, udp_packet);
       });
-    if (first_data_packet) {
-      config->sensor_ip = first_data_packet->src_ip;
-      config->host_ip = first_data_packet->dst_ip;
-      config->data_port = first_data_packet->dst_port;
-    }
-
-    std::shared_ptr<nebula::drivers::HesaiCalibrationConfigurationBase> calib;
-    if (config->sensor_model == nebula::drivers::SensorModel::HESAI_PANDARAT128) {
-      auto at_calib = std::make_shared<nebula::drivers::HesaiCorrection>();
-      if (!calib_file.empty()) {
-        at_calib->load_from_file(calib_file);
+    if (!has_strict_matches) {
+      active_traffic_filter = relaxed_traffic_filter(configured_traffic_filter);
+      if (
+        !configured_traffic_filter.sensor_ip.empty() ||
+        !configured_traffic_filter.host_ip.empty() || !configured_traffic_filter.ports.empty()) {
+        std::lock_guard<std::mutex> lock(g_log_mutex);
+        std::cerr << "Warning: no packets matched configured IP/port filter for sensor " << name
+                  << " in " << pcap_file << ". Falling back to relaxed matching for this file."
+                  << std::endl;
       }
-      calib = at_calib;
-    } else {
-      auto ftx_calib = std::make_shared<nebula::drivers::HesaiCorrectionFTX>();
+    }
+
+    auto exporter = std::make_shared<CloudExporter>(name, "web/data", frame_stride);
+    auto callback =
+      std::bind(&CloudExporter::callback, exporter, std::placeholders::_1, std::placeholders::_2);
+
+    char errbuf[PCAP_ERRBUF_SIZE];
+    pcap_t * handle = pcap_open_offline(pcap_file.c_str(), errbuf);
+    if (handle == nullptr) {
+      std::lock_guard<std::mutex> lock(g_log_mutex);
+      std::cerr << "Could not open pcap file: " << pcap_file << " | error: " << errbuf << std::endl;
+      return result;
+    }
+
+    std::unique_ptr<nebula::drivers::SeyondDecoder> seyond_decoder;
+    std::unique_ptr<nebula::drivers::HesaiDriver> hesai_driver;
+    std::unique_ptr<nebula::drivers::RobosenseDriver> robosense_driver;
+    if (is_seyond_model(model_str)) {
+      auto config = std::make_shared<nebula::drivers::SeyondSensorConfiguration>();
+      config->sensor_model = nebula::drivers::seyond_sensor_model_from_string(model_str);
+      nebula::drivers::SeyondCalibrationData calib;
       if (!calib_file.empty()) {
-        ftx_calib->load_from_file(calib_file);
+        auto res = nebula::drivers::SeyondCalibrationData::load_from_file(calib_file);
+        if (res.has_value()) calib = res.value();
       }
-      calib = ftx_calib;
-    }
+      seyond_decoder = std::make_unique<nebula::drivers::SeyondDecoder>(*config, callback, calib);
+    } else if (is_hesai_model(model_str)) {
+      auto config = std::make_shared<nebula::drivers::HesaiSensorConfiguration>();
+      config->sensor_model = nebula::drivers::sensor_model_from_string(model_str);
+      config->frame_id = "hesai";
+      config->min_range = 0.05;
+      config->max_range = model_str == "PandarAT128" ? 200.0 : 25.0;
+      config->rotation_speed = 600;
+      config->return_mode =
+        model_str == "PandarAT128"
+          ? nebula::drivers::ReturnMode::DUAL_ONLY
+          : nebula::drivers::return_mode_from_string_hesai("First", config->sensor_model);
+      config->dual_return_distance_threshold = 0.1;
+      config->calibration_download_enabled = !calib_file.empty();
 
-    hesai_driver = std::make_unique<nebula::drivers::HesaiDriver>(config, calib, logger, callback);
-  } else if (is_robosense_model(model_str)) {
-    auto config = std::make_shared<nebula::drivers::RobosenseSensorConfiguration>();
-    config->sensor_model = nebula::drivers::sensor_model_from_string(model_str);
-    config->return_mode = nebula::drivers::ReturnMode::SINGLE_STRONGEST;
+      if (model_str == "FTX140") {
+        config->cloud_min_angle = 20;
+        config->cloud_max_angle = 160;
+        config->sync_angle = 20;
+        config->cut_angle = 160.0;
+      } else if (model_str == "FTX180") {
+        config->cloud_min_angle = 0;
+        config->cloud_max_angle = 180;
+        config->sync_angle = 90;
+        config->cut_angle = 180.0;
+      } else {
+        config->cloud_min_angle = 0;
+        config->cloud_max_angle = 360;
+        config->sync_angle = 0;
+        config->cut_angle = 0.0;
+      }
 
-    auto calib = std::make_shared<nebula::drivers::RobosenseCalibrationConfiguration>();
-    if (config->sensor_model == nebula::drivers::SensorModel::ROBOSENSE_EMX) {
-      calib->set_channel_size(192);
-      calib->calibration.resize(192);
-      calib->pixel_pitch.assign(192, 0);
-      calib->half_vcsel_yaw_offset.assign(24, 0);
-      calib->surface_pitch_offset.assign(2, 0);
-    } else if (config->sensor_model == nebula::drivers::SensorModel::ROBOSENSE_EM4) {
-      calib->set_channel_size(520);
+      auto first_data_packet = find_first_matching_udp_packet(
+        pcap_file.string(), [model_str, active_traffic_filter](const UdpPacket & udp_packet) {
+          if (!matches_traffic_filter(active_traffic_filter, udp_packet)) {
+            return false;
+          }
+          if (model_str == "PandarAT128") {
+            return udp_packet.payload.size() >= 1000;
+          }
+          return udp_packet.payload.size() == 554;
+        });
+      if (first_data_packet) {
+        config->sensor_ip = first_data_packet->src_ip;
+        config->host_ip = first_data_packet->dst_ip;
+        config->data_port = first_data_packet->dst_port;
+      }
+
+      std::shared_ptr<nebula::drivers::HesaiCalibrationConfigurationBase> calib;
+      if (config->sensor_model == nebula::drivers::SensorModel::HESAI_PANDARAT128) {
+        auto at_calib = std::make_shared<nebula::drivers::HesaiCorrection>();
+        if (!calib_file.empty()) {
+          at_calib->load_from_file(calib_file);
+        }
+        calib = at_calib;
+      } else {
+        auto ftx_calib = std::make_shared<nebula::drivers::HesaiCorrectionFTX>();
+        if (!calib_file.empty()) {
+          ftx_calib->load_from_file(calib_file);
+        }
+        calib = ftx_calib;
+      }
+
+      hesai_driver =
+        std::make_unique<nebula::drivers::HesaiDriver>(config, calib, logger, callback);
+    } else if (is_robosense_model(model_str)) {
+      auto config = std::make_shared<nebula::drivers::RobosenseSensorConfiguration>();
+      config->sensor_model = nebula::drivers::sensor_model_from_string(model_str);
+      config->return_mode = nebula::drivers::ReturnMode::SINGLE_STRONGEST;
+      config->sensor_ip = sensor_cfg.value("sensor_ip", "");
+      config->host_ip = sensor_cfg.value("host_ip", "");
+      if (const auto data_port = optional_uint16_from_json(sensor_cfg, "data_port")) {
+        config->data_port = *data_port;
+      }
+      if (const auto difop_port = optional_uint16_from_json(sensor_cfg, "difop_port")) {
+        config->gnss_port = *difop_port;
+      }
+
+      std::shared_ptr<nebula::drivers::RobosenseCalibrationConfiguration> calib;
+      if (
+        config->sensor_model == nebula::drivers::SensorModel::ROBOSENSE_EM4 && calib_file.empty()) {
+        calib = nebula::drivers::load_em4_calibration_from_pcap(pcap_file.string(), *config);
+      } else {
+        calib = std::make_shared<nebula::drivers::RobosenseCalibrationConfiguration>();
+      }
+      if (config->sensor_model == nebula::drivers::SensorModel::ROBOSENSE_EMX) {
+        calib->set_channel_size(192);
+        calib->calibration.resize(192);
+        calib->pixel_pitch.assign(192, 0);
+        calib->half_vcsel_yaw_offset.assign(24, 0);
+        calib->surface_pitch_offset.assign(2, 0);
+      } else if (config->sensor_model == nebula::drivers::SensorModel::ROBOSENSE_EM4) {
+        if (calib->calibration.empty()) {
+          calib->set_channel_size(520);
+        }
+      } else {
+        calib->set_channel_size(128);
+      }
+      if (!calib_file.empty()) {
+        calib->load_from_file(calib_file);
+      }
+      robosense_driver = std::make_unique<nebula::drivers::RobosenseDriver>(config, calib);
     } else {
-      calib->set_channel_size(128);
+      std::lock_guard<std::mutex> lock(g_log_mutex);
+      std::cerr << "Unsupported sensor model in current build: " << model_str << std::endl;
+      pcap_close(handle);
+      return result;
     }
-    if (!calib_file.empty()) {
-      calib->load_from_file(calib_file);
+
+    struct pcap_pkthdr * header;
+    const u_char * packet_bytes;
+    std::map<ReassemblyKey, FragmentAssembly> seyond_assemblies;
+    while (pcap_next_ex(handle, &header, &packet_bytes) >= 0) {
+      if (seyond_decoder) {
+        process_seyond_ipv4_packet(
+          packet_bytes, header->caplen, seyond_assemblies, *seyond_decoder, active_traffic_filter);
+      } else if (hesai_driver || robosense_driver) {
+        UdpPacket udp_packet{};
+        if (!extract_udp_payload(packet_bytes, header->caplen, udp_packet)) {
+          continue;
+        }
+
+        if (hesai_driver) {
+          if (!should_process_hesai_packet(model_str, udp_packet, active_traffic_filter)) {
+            continue;
+          }
+          hesai_driver->parse_cloud_packet(udp_packet.payload);
+        } else if (robosense_driver) {
+          if (!should_process_robosense_packet(model_str, udp_packet, active_traffic_filter)) {
+            continue;
+          }
+          auto [cloud, timestamp] = robosense_driver->parse_cloud_packet(udp_packet.payload);
+          if (cloud && !cloud->empty()) {
+            exporter->callback(cloud, static_cast<uint64_t>(timestamp * 1e9));
+          }
+        }
+      }
     }
-    robosense_driver = std::make_unique<nebula::drivers::RobosenseDriver>(config, calib);
-  } else {
-    std::lock_guard<std::mutex> lock(g_log_mutex);
-    std::cerr << "Unsupported sensor model in current build: " << model_str << std::endl;
     pcap_close(handle);
-    return result;
-  }
 
-  struct pcap_pkthdr * header;
-  const u_char * packet_bytes;
-  std::map<ReassemblyKey, FragmentAssembly> seyond_assemblies;
-  while (pcap_next_ex(handle, &header, &packet_bytes) >= 0) {
-    if (seyond_decoder) {
-      process_seyond_ipv4_packet(packet_bytes, header->caplen, seyond_assemblies, *seyond_decoder);
-    } else if (hesai_driver || robosense_driver) {
-      UdpPacket udp_packet{};
-      if (!extract_udp_payload(packet_bytes, header->caplen, udp_packet)) {
-        continue;
-      }
-
-      if (hesai_driver) {
-        if (!should_process_hesai_packet(model_str, udp_packet)) {
-          continue;
-        }
-        hesai_driver->parse_cloud_packet(udp_packet.payload);
-      } else if (robosense_driver) {
-        if (!should_process_robosense_packet(model_str, udp_packet)) {
-          continue;
-        }
-        auto [cloud, timestamp] = robosense_driver->parse_cloud_packet(udp_packet.payload);
-        if (cloud && !cloud->empty()) {
-          exporter->callback(cloud, static_cast<uint64_t>(timestamp * 1e9));
-        }
-      }
+    {
+      std::lock_guard<std::mutex> lock(g_log_mutex);
+      std::cout << "Done sensor: " << name << " | frames: " << exporter->get_frames().size()
+                << std::endl;
     }
-  }
-  pcap_close(handle);
 
-  {
+    result.processed = true;
+    result.exporter = exporter;
+  } catch (const std::exception & ex) {
     std::lock_guard<std::mutex> lock(g_log_mutex);
-    std::cout << "Done sensor: " << name << " | frames: " << exporter->get_frames().size()
-              << std::endl;
+    std::cerr << "Sensor processing failed: " << name << " (" << model_str
+              << ") | error: " << ex.what() << std::endl;
   }
-
-  result.processed = true;
-  result.exporter = exporter;
   return result;
 }
 
@@ -567,10 +757,16 @@ int main(int argc, char ** argv)
     return 1;
   }
   json project = json::parse(f);
+  const fs::path project_dir = fs::absolute(fs::path(project_file)).parent_path();
+  if (!project.contains("sensors") || !project["sensors"].is_array()) {
+    std::cerr << "Project file must contain a 'sensors' array" << std::endl;
+    return 1;
+  }
 
   auto logger = std::make_shared<ConsoleLogger>();
   std::vector<std::shared_ptr<CloudExporter>> exporters;
   json processed_sensors = json::array();
+  json skipped_sensors = json::array();
 
   fs::remove_all("web/data");  // Clean old data
   fs::create_directories("web/data");
@@ -580,13 +776,44 @@ int main(int argc, char ** argv)
   std::vector<std::future<SensorResult>> futures;
   futures.reserve(project["sensors"].size());
   for (const auto & sensor_cfg : project["sensors"]) {
+    if (!sensor_cfg.is_object()) {
+      skipped_sensors.push_back({{"reason", "sensor entry is not a JSON object"}});
+      continue;
+    }
+
+    const std::string name = sensor_cfg.value("name", "<unnamed>");
+    const std::string pcap_value = sensor_cfg.value("pcap", "");
+    if (pcap_value.empty()) {
+      skipped_sensors.push_back({{"name", name}, {"reason", "missing pcap path"}});
+      std::lock_guard<std::mutex> lock(g_log_mutex);
+      std::cerr << "Skipping sensor " << name << ": missing pcap path" << std::endl;
+      continue;
+    }
+
+    const fs::path pcap_file = resolve_project_path(project_dir, pcap_value);
+    std::error_code ec;
+    const bool exists = fs::exists(pcap_file, ec);
+    if (ec || !exists) {
+      skipped_sensors.push_back(
+        {{"name", name}, {"pcap", pcap_file.string()}, {"reason", "pcap file not found"}});
+      std::lock_guard<std::mutex> lock(g_log_mutex);
+      std::cerr << "Skipping sensor " << name << ": pcap file not found: " << pcap_file
+                << std::endl;
+      continue;
+    }
+
     futures.push_back(
-      std::async(std::launch::async, process_sensor, sensor_cfg, export_defaults, logger));
+      std::async(
+        std::launch::async, process_sensor, sensor_cfg, export_defaults, project_dir, logger));
   }
 
   for (auto & future : futures) {
     auto result = future.get();
     if (!result.processed) {
+      skipped_sensors.push_back(
+        {{"name", result.sensor_cfg.value("name", "<unnamed>")},
+         {"pcap", result.sensor_cfg.value("pcap", "")},
+         {"reason", "failed during processing"}});
       continue;
     }
     exporters.push_back(result.exporter);
@@ -596,6 +823,7 @@ int main(int argc, char ** argv)
   // Save metadata for web visualizer
   json meta;
   meta["project_name"] = project.value("project_name", "Multi-Sensor Visualization");
+  meta["skipped_sensors"] = skipped_sensors;
 
   // Calculate global timeline (union of all timestamps)
   std::set<uint64_t> all_timestamps;
@@ -634,8 +862,17 @@ int main(int argc, char ** argv)
   meta_file << meta.dump(2);
   meta_file.close();
 
-  std::cout << "Finished! Processed " << exporters.size() << " sensors and "
-            << global_timeline.size() << " global timeline points." << std::endl;
+  std::cout << "Finished! Processed " << exporters.size() << " sensors";
+  if (!skipped_sensors.empty()) {
+    std::cout << ", skipped " << skipped_sensors.size() << " sensors";
+  }
+  std::cout << ", and exported " << global_timeline.size() << " global timeline points."
+            << std::endl;
+
+  if (exporters.empty()) {
+    std::cerr << "No sensors were processed successfully." << std::endl;
+    return 1;
+  }
 
   return 0;
 }

@@ -1,13 +1,8 @@
 {
   "configuration_name": "all_sensors",
-  "output_root": "recordings",
+  "output_root": "../experiments",
   "tcpdump_binary": "tcpdump",
-  "tcpdump_flags": [
-    "-n",
-    "-s",
-    "0",
-    "-U"
-  ],
+  "tcpdump_flags": ["-n", "-s", "0", "-U"],
   "sensors": [
     {
       "name": "robosense_e1",
@@ -15,9 +10,8 @@
       "interface": "eth0",
       "host_ip": "192.168.10.20",
       "sensor_ip": "192.168.10.101",
-      "ports": [
-        6699
-      ],
+      "data_port": 6699,
+      "ports": [6699],
       "visualize": true
     },
     {
@@ -26,11 +20,9 @@
       "interface": "eth0",
       "host_ip": "192.168.10.20",
       "sensor_ip": "192.168.10.103",
-      "ports": [
-        4699,
-        4788,
-        6766
-      ],
+      "data_port": 4699,
+      "difop_port": 4766,
+      "ports": [4699, 4788, 4766],
       "visualize": true
     },
     {
@@ -39,55 +31,49 @@
       "interface": "eth0",
       "host_ip": "192.168.10.20",
       "sensor_ip": "192.168.10.104",
-      "ports": [
-        5699,
-        5788,
-        5766
-      ],
+      "data_port": 5699,
+      "difop_port": 5766,
+      "ports": [5699, 5788, 5766],
       "visualize": true
     },
     {
       "name": "seyond_robin_w",
       "model": "RobinW",
+      "calib": "../calibration_files/seyond_robinw/anglehv_table.bin",
       "interface": "eth0",
       "host_ip": "192.168.10.20",
       "sensor_ip": "192.168.10.102",
-      "ports": [
-        2373
-      ],
+      "ports": [2373],
       "visualize": true
     },
     {
       "name": "seyond_robin_e",
       "model": "RobinE1X",
+      "calib": "../calibration_files/seyond_robine1x/anglehv_table.bin",
       "interface": "eth1",
       "host_ip": "192.168.1.20",
       "sensor_ip": "192.168.1.130",
-      "ports": [
-        2372
-      ],
+      "ports": [2372],
       "visualize": true
     },
     {
       "name": "hesai_ftx180",
       "model": "FTX180",
+      "calib": "../calibration_files/hesai_ftx180/ftx180.dat",
       "interface": "eth1",
       "host_ip": "192.168.1.20",
       "sensor_ip": "192.168.1.180",
-      "ports": [
-        2368
-      ],
+      "ports": [2368],
       "visualize": true
     },
     {
       "name": "hesai_ftx140",
       "model": "FTX140",
+      "calib": "../calibration_files/hesai_ftx140/ftx140.dat",
       "interface": "eth1",
       "host_ip": "192.168.1.20",
       "sensor_ip": "192.168.1.140",
-      "ports": [
-        2369
-      ],
+      "ports": [2369],
       "visualize": true
     },
     {
@@ -96,20 +82,17 @@
       "interface": "eth1",
       "host_ip": "192.168.1.20",
       "sensor_ip": "192.168.1.128",
-      "ports": [
-        2370
-      ],
+      "ports": [2370],
       "visualize": true
     },
     {
       "name": "seyond_hummingbird_d1",
       "model": "HummingbirdD1",
+      "calib": "../calibration_files/seyond_hummingbirdd1/anglehv_table.bin",
       "interface": "eth1",
       "host_ip": "192.168.1.20",
       "sensor_ip": "192.168.1.110",
-      "ports": [
-        2371
-      ],
+      "ports": [2371],
       "visualize": true
     },
     {
@@ -134,9 +117,7 @@
       "interface": "eth4",
       "host_ip": "172.168.1.15",
       "sensor_ip": "172.168.1.10",
-      "ports": [
-        8010
-      ],
+      "ports": [8010],
       "visualize": true
     }
   ]

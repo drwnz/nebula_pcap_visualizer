@@ -181,7 +181,14 @@ async function loadMetadata() {
       );
     });
 
-    statusLabel.innerText = `${data.project_name || "Project"} loaded. ${sensors.length} separate views.`;
+    const skippedCount = Array.isArray(data.skipped_sensors)
+      ? data.skipped_sensors.length
+      : 0;
+    statusLabel.innerText =
+      `${data.project_name || "Project"} loaded. ${sensors.length} separate views.` +
+      (skippedCount > 0
+        ? ` Skipped ${skippedCount} sensors with missing inputs.`
+        : "");
     await Promise.all(sensors.map((sensor) => loadSensorFrame(sensor, 0)));
   } catch (e) {
     console.error("Error loading metadata:", e);

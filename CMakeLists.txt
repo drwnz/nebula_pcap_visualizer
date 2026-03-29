@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(nebula_pcap_visualizer)
+project(pcap_visualizer)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -28,14 +28,15 @@ include_directories(
   ${nebula_robosense_decoders_INCLUDE_DIRS}
 )
 
-add_executable(pcap_converter src/main.cpp)
+add_executable(pcap_visualizer src/main.cpp)
 
-target_link_libraries(pcap_converter
+target_link_libraries(pcap_visualizer
   nebula_core_common::nebula_core_common
   nebula_core_decoders::nebula_core_decoders
   nebula_seyond_decoders::nebula_seyond_decoders
   nebula_hesai_decoders::nebula_hesai_decoders
   nebula_robosense_decoders::nebula_robosense_decoders
+  nebula_robosense_decoders::nebula_robosense_decoders_info
   nlohmann_json::nlohmann_json
   ${PCAP_LIBRARY}
 )
