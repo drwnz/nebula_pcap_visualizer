@@ -1,0 +1,276 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="robosense_e1_sensor_model" default="E1" />
+  <arg name="robosense_e1_host_ip" default="192.168.10.20" />
+  <arg name="robosense_e1_sensor_ip" default="192.168.10.101" />
+  <arg name="robosense_e1_data_port" default="6699" />
+  <arg name="robosense_e1_gnss_port" default="7788" />
+  <arg name="robosense_e1_launch_hw" default="true" />
+  <arg name="robosense_e1_setup_sensor" default="false" />
+  <arg name="robosense_e1_frame_id" default="robosense_e1" />
+
+  <arg name="robosense_emx_sensor_model" default="EMX" />
+  <arg name="robosense_emx_host_ip" default="192.168.10.20" />
+  <arg name="robosense_emx_sensor_ip" default="192.168.10.103" />
+  <arg name="robosense_emx_data_port" default="4699" />
+  <arg name="robosense_emx_gnss_port" default="4766" />
+  <arg name="robosense_emx_launch_hw" default="true" />
+  <arg name="robosense_emx_setup_sensor" default="false" />
+  <arg name="robosense_emx_frame_id" default="robosense_emx" />
+
+  <arg name="robosense_em4_sensor_model" default="EM4" />
+  <arg name="robosense_em4_host_ip" default="192.168.10.20" />
+  <arg name="robosense_em4_sensor_ip" default="192.168.10.104" />
+  <arg name="robosense_em4_data_port" default="5699" />
+  <arg name="robosense_em4_gnss_port" default="5766" />
+  <arg name="robosense_em4_launch_hw" default="true" />
+  <arg name="robosense_em4_setup_sensor" default="false" />
+  <arg name="robosense_em4_frame_id" default="robosense_em4" />
+
+  <arg name="seyond_robin_w_sensor_model" default="RobinW" />
+  <arg name="seyond_robin_w_host_ip" default="192.168.10.20" />
+  <arg name="seyond_robin_w_sensor_ip" default="192.168.10.102" />
+  <arg name="seyond_robin_w_udp_port" default="2373" />
+  <arg name="seyond_robin_w_launch_hw" default="true" />
+  <arg name="seyond_robin_w_setup_sensor" default="false" />
+  <arg name="seyond_robin_w_frame_id" default="seyond_robin_w" />
+
+  <arg name="seyond_robin_e_sensor_model" default="RobinE1X" />
+  <arg name="seyond_robin_e_host_ip" default="192.168.1.20" />
+  <arg name="seyond_robin_e_sensor_ip" default="192.168.1.130" />
+  <arg name="seyond_robin_e_udp_port" default="2372" />
+  <arg name="seyond_robin_e_launch_hw" default="true" />
+  <arg name="seyond_robin_e_setup_sensor" default="false" />
+  <arg name="seyond_robin_e_frame_id" default="seyond_robin_e" />
+
+  <arg name="hesai_ftx180_sensor_model" default="FTX180" />
+  <arg name="hesai_ftx180_host_ip" default="192.168.1.20" />
+  <arg name="hesai_ftx180_sensor_ip" default="192.168.1.180" />
+  <arg name="hesai_ftx180_data_port" default="2368" />
+  <arg name="hesai_ftx180_gnss_port" default="10110" />
+  <arg name="hesai_ftx180_launch_hw" default="true" />
+  <arg name="hesai_ftx180_setup_sensor" default="false" />
+  <arg name="hesai_ftx180_frame_id" default="hesai_ftx180" />
+  <arg
+    name="hesai_ftx180_correction_file"
+    default="/home/davidwong/Projects/JARI/calibration_files/hesai_ftx180/ftx180.dat"
+  />
+
+  <arg name="hesai_ftx140_sensor_model" default="FTX140" />
+  <arg name="hesai_ftx140_host_ip" default="192.168.1.20" />
+  <arg name="hesai_ftx140_sensor_ip" default="192.168.1.140" />
+  <arg name="hesai_ftx140_data_port" default="2369" />
+  <arg name="hesai_ftx140_gnss_port" default="10110" />
+  <arg name="hesai_ftx140_launch_hw" default="true" />
+  <arg name="hesai_ftx140_setup_sensor" default="false" />
+  <arg name="hesai_ftx140_frame_id" default="hesai_ftx140" />
+  <arg
+    name="hesai_ftx140_correction_file"
+    default="/home/davidwong/Projects/JARI/calibration_files/hesai_ftx140/ftx140.dat"
+  />
+
+  <arg name="hesai_at128_sensor_model" default="PandarAT128" />
+  <arg name="hesai_at128_host_ip" default="192.168.1.20" />
+  <arg name="hesai_at128_sensor_ip" default="192.168.1.128" />
+  <arg name="hesai_at128_data_port" default="2370" />
+  <arg name="hesai_at128_gnss_port" default="10110" />
+  <arg name="hesai_at128_launch_hw" default="true" />
+  <arg name="hesai_at128_setup_sensor" default="false" />
+  <arg name="hesai_at128_frame_id" default="hesai_at128" />
+  <arg
+    name="hesai_at128_correction_file"
+    default="$(find-pkg-share nebula_hesai_decoders)/calibration/PandarAT128.dat"
+  />
+
+  <arg name="seyond_hummingbird_d1_sensor_model" default="HummingbirdD1" />
+  <arg name="seyond_hummingbird_d1_host_ip" default="192.168.1.20" />
+  <arg name="seyond_hummingbird_d1_sensor_ip" default="192.168.1.110" />
+  <arg name="seyond_hummingbird_d1_udp_port" default="2371" />
+  <arg name="seyond_hummingbird_d1_launch_hw" default="true" />
+  <arg name="seyond_hummingbird_d1_setup_sensor" default="false" />
+  <arg name="seyond_hummingbird_d1_frame_id" default="seyond_hummingbird_d1" />
+
+  <arg name="seyond_falcon_sensor_model" default="FalconK" />
+  <arg name="seyond_falcon_host_ip" default="172.168.1.15" />
+  <arg name="seyond_falcon_sensor_ip" default="172.168.1.10" />
+  <arg name="seyond_falcon_udp_port" default="8010" />
+  <arg name="seyond_falcon_launch_hw" default="true" />
+  <arg name="seyond_falcon_setup_sensor" default="false" />
+  <arg name="seyond_falcon_frame_id" default="seyond_falcon" />
+
+  <node
+    pkg="nebula_robosense"
+    exec="robosense_ros_wrapper_node"
+    namespace="robosense_e1"
+    name="robosense_ros_wrapper_node"
+    output="screen">
+    <param name="sensor_model" value="$(var robosense_e1_sensor_model)" />
+    <param name="host_ip" value="$(var robosense_e1_host_ip)" />
+    <param name="sensor_ip" value="$(var robosense_e1_sensor_ip)" />
+    <param name="data_port" value="$(var robosense_e1_data_port)" />
+    <param name="gnss_port" value="$(var robosense_e1_gnss_port)" />
+    <param name="launch_hw" value="$(var robosense_e1_launch_hw)" />
+    <param name="setup_sensor" value="$(var robosense_e1_setup_sensor)" />
+    <param name="frame_id" value="$(var robosense_e1_frame_id)" />
+    <remap from="/robosense_packets" to="robosense_packets" />
+    <remap from="/robosense_info_packets" to="robosense_info_packets" />
+  </node>
+
+  <node
+    pkg="nebula_robosense"
+    exec="robosense_ros_wrapper_node"
+    namespace="robosense_emx"
+    name="robosense_ros_wrapper_node"
+    output="screen">
+    <param name="sensor_model" value="$(var robosense_emx_sensor_model)" />
+    <param name="host_ip" value="$(var robosense_emx_host_ip)" />
+    <param name="sensor_ip" value="$(var robosense_emx_sensor_ip)" />
+    <param name="data_port" value="$(var robosense_emx_data_port)" />
+    <param name="gnss_port" value="$(var robosense_emx_gnss_port)" />
+    <param name="launch_hw" value="$(var robosense_emx_launch_hw)" />
+    <param name="setup_sensor" value="$(var robosense_emx_setup_sensor)" />
+    <param name="frame_id" value="$(var robosense_emx_frame_id)" />
+    <remap from="/robosense_packets" to="robosense_packets" />
+    <remap from="/robosense_info_packets" to="robosense_info_packets" />
+  </node>
+
+  <node
+    pkg="nebula_robosense"
+    exec="robosense_ros_wrapper_node"
+    namespace="robosense_em4"
+    name="robosense_ros_wrapper_node"
+    output="screen">
+    <param name="sensor_model" value="$(var robosense_em4_sensor_model)" />
+    <param name="host_ip" value="$(var robosense_em4_host_ip)" />
+    <param name="sensor_ip" value="$(var robosense_em4_sensor_ip)" />
+    <param name="data_port" value="$(var robosense_em4_data_port)" />
+    <param name="gnss_port" value="$(var robosense_em4_gnss_port)" />
+    <param name="launch_hw" value="$(var robosense_em4_launch_hw)" />
+    <param name="setup_sensor" value="$(var robosense_em4_setup_sensor)" />
+    <param name="frame_id" value="$(var robosense_em4_frame_id)" />
+    <remap from="/robosense_packets" to="robosense_packets" />
+    <remap from="/robosense_info_packets" to="robosense_info_packets" />
+  </node>
+
+  <node
+    pkg="nebula_seyond"
+    exec="seyond_ros_wrapper_node"
+    namespace="seyond_robin_w"
+    name="seyond_ros_wrapper_node"
+    output="screen">
+    <param name="sensor_model" value="$(var seyond_robin_w_sensor_model)" />
+    <param name="host_ip" value="$(var seyond_robin_w_host_ip)" />
+    <param name="sensor_ip" value="$(var seyond_robin_w_sensor_ip)" />
+    <param name="udp_port" value="$(var seyond_robin_w_udp_port)" />
+    <param name="udp_message_port" value="$(var seyond_robin_w_udp_port)" />
+    <param name="udp_status_port" value="$(var seyond_robin_w_udp_port)" />
+    <param name="launch_hw" value="$(var seyond_robin_w_launch_hw)" />
+    <param name="setup_sensor" value="$(var seyond_robin_w_setup_sensor)" />
+    <param name="frame_id" value="$(var seyond_robin_w_frame_id)" />
+  </node>
+
+  <node
+    pkg="nebula_seyond"
+    exec="seyond_ros_wrapper_node"
+    namespace="seyond_robin_e"
+    name="seyond_ros_wrapper_node"
+    output="screen">
+    <param name="sensor_model" value="$(var seyond_robin_e_sensor_model)" />
+    <param name="host_ip" value="$(var seyond_robin_e_host_ip)" />
+    <param name="sensor_ip" value="$(var seyond_robin_e_sensor_ip)" />
+    <param name="udp_port" value="$(var seyond_robin_e_udp_port)" />
+    <param name="udp_message_port" value="$(var seyond_robin_e_udp_port)" />
+    <param name="udp_status_port" value="$(var seyond_robin_e_udp_port)" />
+    <param name="launch_hw" value="$(var seyond_robin_e_launch_hw)" />
+    <param name="setup_sensor" value="$(var seyond_robin_e_setup_sensor)" />
+    <param name="frame_id" value="$(var seyond_robin_e_frame_id)" />
+  </node>
+
+  <node
+    pkg="nebula_hesai"
+    exec="hesai_ros_wrapper_node"
+    namespace="hesai_ftx180"
+    name="hesai_ros_wrapper_node"
+    output="screen">
+    <param name="sensor_model" value="$(var hesai_ftx180_sensor_model)" />
+    <param name="host_ip" value="$(var hesai_ftx180_host_ip)" />
+    <param name="sensor_ip" value="$(var hesai_ftx180_sensor_ip)" />
+    <param name="data_port" value="$(var hesai_ftx180_data_port)" />
+    <param name="gnss_port" value="$(var hesai_ftx180_gnss_port)" />
+    <param name="launch_hw" value="$(var hesai_ftx180_launch_hw)" />
+    <param name="setup_sensor" value="$(var hesai_ftx180_setup_sensor)" />
+    <param name="frame_id" value="$(var hesai_ftx180_frame_id)" />
+    <param name="correction_file" value="$(var hesai_ftx180_correction_file)" />
+    <param name="calibration_download_enabled" value="false" />
+  </node>
+
+  <node
+    pkg="nebula_hesai"
+    exec="hesai_ros_wrapper_node"
+    namespace="hesai_ftx140"
+    name="hesai_ros_wrapper_node"
+    output="screen">
+    <param name="sensor_model" value="$(var hesai_ftx140_sensor_model)" />
+    <param name="host_ip" value="$(var hesai_ftx140_host_ip)" />
+    <param name="sensor_ip" value="$(var hesai_ftx140_sensor_ip)" />
+    <param name="data_port" value="$(var hesai_ftx140_data_port)" />
+    <param name="gnss_port" value="$(var hesai_ftx140_gnss_port)" />
+    <param name="launch_hw" value="$(var hesai_ftx140_launch_hw)" />
+    <param name="setup_sensor" value="$(var hesai_ftx140_setup_sensor)" />
+    <param name="frame_id" value="$(var hesai_ftx140_frame_id)" />
+    <param name="correction_file" value="$(var hesai_ftx140_correction_file)" />
+    <param name="calibration_download_enabled" value="false" />
+  </node>
+
+  <node
+    pkg="nebula_hesai"
+    exec="hesai_ros_wrapper_node"
+    namespace="hesai_at128"
+    name="hesai_ros_wrapper_node"
+    output="screen">
+    <param name="sensor_model" value="$(var hesai_at128_sensor_model)" />
+    <param name="host_ip" value="$(var hesai_at128_host_ip)" />
+    <param name="sensor_ip" value="$(var hesai_at128_sensor_ip)" />
+    <param name="data_port" value="$(var hesai_at128_data_port)" />
+    <param name="gnss_port" value="$(var hesai_at128_gnss_port)" />
+    <param name="launch_hw" value="$(var hesai_at128_launch_hw)" />
+    <param name="setup_sensor" value="$(var hesai_at128_setup_sensor)" />
+    <param name="frame_id" value="$(var hesai_at128_frame_id)" />
+    <param name="correction_file" value="$(var hesai_at128_correction_file)" />
+    <param name="calibration_download_enabled" value="false" />
+  </node>
+
+  <node
+    pkg="nebula_seyond"
+    exec="seyond_ros_wrapper_node"
+    namespace="seyond_hummingbird_d1"
+    name="seyond_ros_wrapper_node"
+    output="screen">
+    <param name="sensor_model" value="$(var seyond_hummingbird_d1_sensor_model)" />
+    <param name="host_ip" value="$(var seyond_hummingbird_d1_host_ip)" />
+    <param name="sensor_ip" value="$(var seyond_hummingbird_d1_sensor_ip)" />
+    <param name="udp_port" value="$(var seyond_hummingbird_d1_udp_port)" />
+    <param name="udp_message_port" value="$(var seyond_hummingbird_d1_udp_port)" />
+    <param name="udp_status_port" value="$(var seyond_hummingbird_d1_udp_port)" />
+    <param name="launch_hw" value="$(var seyond_hummingbird_d1_launch_hw)" />
+    <param name="setup_sensor" value="$(var seyond_hummingbird_d1_setup_sensor)" />
+    <param name="frame_id" value="$(var seyond_hummingbird_d1_frame_id)" />
+  </node>
+
+  <node
+    pkg="nebula_seyond"
+    exec="seyond_ros_wrapper_node"
+    namespace="seyond_falcon"
+    name="seyond_ros_wrapper_node"
+    output="screen">
+    <param name="sensor_model" value="$(var seyond_falcon_sensor_model)" />
+    <param name="host_ip" value="$(var seyond_falcon_host_ip)" />
+    <param name="sensor_ip" value="$(var seyond_falcon_sensor_ip)" />
+    <param name="udp_port" value="$(var seyond_falcon_udp_port)" />
+    <param name="udp_message_port" value="$(var seyond_falcon_udp_port)" />
+    <param name="udp_status_port" value="$(var seyond_falcon_udp_port)" />
+    <param name="launch_hw" value="$(var seyond_falcon_launch_hw)" />
+    <param name="setup_sensor" value="$(var seyond_falcon_setup_sensor)" />
+    <param name="frame_id" value="$(var seyond_falcon_frame_id)" />
+  </node>
+</launch>

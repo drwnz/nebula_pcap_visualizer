@@ -210,3 +210,38 @@ Sensors with `visualize: false` are skipped. Sensors are also skipped if their o
 By default the frontend is served at `http://localhost:8000`. Set `WEB_PORT` before running the script if you want a different port.
 
 If `build/pcap_visualizer` does not exist yet, run `./build.sh` first.
+
+## Nebula Hardware Launch
+
+This repository also includes a namespaced Nebula launch file that reads the shared experiment config and launches one hardware wrapper per supported sensor. Each sensor runs in a namespace matching its `name` field from the config, uses `launch_hw=true`, and uses `setup_sensor=false` where the underlying wrapper supports it.
+
+Run it with:
+
+```bash
+./run_nebula_launch jari_experiment.json
+```
+
+The launch file is [launch/nebula_sensors.launch.py](/home/davidwong/Projects/JARI/nebula_pcap_visualizer/launch/nebula_sensors.launch.py).
+
+There is also a static backup XML launch file at [launch/nebula_sensors_backup.launch.xml](/home/davidwong/Projects/JARI/nebula_pcap_visualizer/launch/nebula_sensors_backup.launch.xml). It mirrors the current experiment layout with one namespaced node block per sensor and exposes the driver parameters directly as editable launch arguments instead of generating them from JSON.
+
+## Recording Nebula Bags
+
+To record the packet topics published by the launched Nebula wrappers into a rosbag:
+
+```bash
+./record_nebula_bag jari_experiment.json
+```
+
+Use `--dry-run` to print the derived topic list without starting recording:
+
+```bash
+./record_nebula_bag jari_experiment.json --dry-run
+```
+
+Current packet topics recorded by the helper are:
+
+- Hesai: `/<sensor_name>/pandar_packets`
+- Robosense: `/<sensor_name>/robosense_packets` and `/<sensor_name>/robosense_info_packets`
+
+Current Nebula Seyond hardware wrappers do not publish raw packet topics, so those sensors are reported and skipped by the bag-recording helper.

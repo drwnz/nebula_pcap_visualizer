@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_PATH="${1:-$ROOT_DIR/jari_experiment.json}"
+
+if ! command -v ros2 >/dev/null 2>&1; then
+  echo "ros2 was not found in PATH. Source your ROS/Nebula workspace first." >&2
+  exit 1
+fi
+
+exec ros2 launch "$ROOT_DIR/launch/nebula_sensors.launch.py" "config:=$CONFIG_PATH"
